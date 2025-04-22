@@ -3,7 +3,6 @@ from user_db_management import *
 from constant import get_int, get_date, take_date
 import datetime
 
-book_collection = load_books_db()
 
 user_collection = load_members_db()
 
@@ -14,41 +13,48 @@ class Member(User):
         self.role = RoleStatus.member.value
 
     def borrow_book(self):
+        show_books_db()
         print("Book ISBN: ")
         book_isbn = get_int()
         print("Borrow date (YYYY-DD-MM): ")
         borrow_date = get_date()
-        book = book_collection[book_isbn]
-        if book.copies > 0:
-            with database:
-                new_copies = book.copies - 1
-                c.execute(
-                    "UPDATE books SET copies =:copies WHERE isbn =:isbn",
-                    {"copies": new_copies, "isbn": book.isbn},
-                )
-            borrow_book_db(self, book, borrow_date)
+        book_collection = load_books_db()
+        if book_isbn in book_collection:
+            book = book_collection[book_isbn]
+            if book.copies > 0:
+                with database:
+                    new_copies = book.copies - 1
+                    c.execute(
+                        "UPDATE books SET copies =:copies WHERE isbn =:isbn",
+                        {"copies": new_copies, "isbn": book_isbn},
+                    )
+                borrow_book_db(self, book_isbn, borrow_date)
+            else:
+                with database:
+                    c.execute(
+                        "UPDATE books SET status =:status WHERE isbn =:isbn",
+                        {"status": BookStatus.not_available.value, "isbn": book_isbn},
+                    )
+                print("No available book is present")
         else:
-
-            with database:
-                c.execute(
-                    "UPDATE books SET status =:status WHERE isbn =:isbn",
-                    {"status": BookStatus.not_available.value, "isbn": book.isbn},
-                )
-            print("No available book is present")
+            print("Invalid ISBN")
 
     def return_book(self):
+        show_books_db()
         print("Book ISBN: ")
         book_isbn = get_int()
         return_date = datetime.datetime.now()
+        book_collection = load_books_db()
+
         book = book_collection[book_isbn]
         with database:
             new_copies = book.copies + 1
             c.execute(
                 "UPDATE books SET copies =:copies WHERE isbn =:isbn",
-                {"copies": new_copies, "isbn": book.isbn},
+                {"copies": new_copies, "isbn": book_isbn},
             )
         book = book_collection[book_isbn]
-        return_book_db(self, book, return_date)
+        return_book_db(self, book_isbn, return_date)
 
 
 class Admin(User):
@@ -65,6 +71,7 @@ class Admin(User):
         copies = get_int()
         book = Book(title, author, genre, copies)
         add_book_db(book)
+        book_collection = load_books_db()
 
     def update_book(self):
         show_books_db()
@@ -74,14 +81,10 @@ class Admin(User):
         title = input("Enter Title: ")
         print("Enter copies: ")
         copies = get_int()
+        book_collection = load_books_db()
         if isbn in book_collection:
             update_book_db(isbn, title, copies)
-            print("Book is successfully deleted")
-            print(
-                "After updating the book information is {}".format(
-                    book_collection[isbn]
-                )
-            )
+            print("Book is successfully updated")
 
         else:
             print("Book doesn't exist in the library")
@@ -91,6 +94,7 @@ class Admin(User):
         print("---DELETING BOOK---")
         print("Book ISBN: ")
         isbn = get_int()
+        book_collection = load_books_db()
         if isbn in book_collection:
             delete_book_db(isbn)
             print("Book is successfully deleted")
@@ -99,25 +103,15 @@ class Admin(User):
 
     def search_book(self):
         print("---SEARCHING BOOK---")
-        print("Book ISBN: ")
-        isbn = get_int()
-
-        if isbn in book_collection:
-            search_book_db(isbn)
-        else:
-            print("Book doesn't exist in the library")
         title = input("Enter title: ")
-        # for isbn, book in book_collection.items():
-        #     if book.title in book:
-        #         search_book_db(title)
-        #     else:
-        #         print("Book doesn't exist with this title")
+        search_book_db(title)
 
     def add_member(self):
         name = input("Name :")
         email = input("Email: ")
         password = input("Password: ")
         user = User(name, email, password)
+        user_collection = load_members_db()
         add_member_db(user)
 
     def update_member(self):
@@ -128,6 +122,7 @@ class Admin(User):
         name = input("Enter press or type user name: ")
         email = input("Enter press or type user email: ")
         password = input("Enter or press password :")
+        user_collection = load_members_db()
         if u_id in user_collection:
             update_member_db(u_id, name, email, password)
             # ektu problem kore
@@ -141,6 +136,7 @@ class Admin(User):
         print("---DELETING USER---")
         print("Enter user id: ")
         u_id = get_int()
+        user_collection = load_members_db()
         if u_id in user_collection:
             delete_member_db(u_id)
             print("Deletion is successfull")

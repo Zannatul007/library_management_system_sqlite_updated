@@ -40,8 +40,8 @@ class User:
         self.role = None
 
     def __str__(self):
-        return "Name: {}\n Email: {}\n Role: {}".format(
-            self.name, self.email, self.role
+        return "ID:{}\nName: {}\n Email: {}\n Role: {}".format(
+            self.id, self.name, self.email, self.role
         )
 
 
@@ -58,8 +58,6 @@ def add_member_db(user):
         )
 
         user.role = RoleStatus.member.value
-        
-
         user.id = c.lastrowid
 
 
@@ -119,3 +117,13 @@ def load_members_db():
 
             user_collection[m_id] = new_member
         return user_collection
+
+
+def show_members():
+    user_collection = load_members_db()
+    for id, user in user_collection.items():
+        print(user)
+
+
+show_members()
+show_members_db()

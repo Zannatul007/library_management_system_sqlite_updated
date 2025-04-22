@@ -39,5 +39,11 @@ admin = Admin("Sabbir", "sabbir@gmail.com", "sabbir123")
 
 # m1 = register()
 # print(m1)
-m1 = register()
-m1.borrow_book()
+# m1 = register()
+# m1.borrow_book()
+
+admin.add_book()
+admin.add_book()
+admin.add_book()
+
+admin.add_member()

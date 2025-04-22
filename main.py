@@ -22,7 +22,7 @@ while True:
                 if ip2 == 2:
                     user.return_book()
                 if ip2 == 3:
-                    pass
+                    show_all_transactions()
                 if ip2 == 4:
                     break
         elif user.role == "Admin":
@@ -62,3 +62,7 @@ while True:
                     show_members_db()
                 if ip3 == 11:
                     break
+    elif ip1 == 2:
+        user = register()
+    elif ip1 == 3:
+        break

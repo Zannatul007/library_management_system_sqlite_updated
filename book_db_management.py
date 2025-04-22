@@ -52,7 +52,6 @@ def add_book_db(book):
         )
 
         book.isbn = c.lastrowid
-         
 
 
 def update_book_db(isbn, title, copies):
@@ -64,28 +63,19 @@ def update_book_db(isbn, title, copies):
         )
 
 
-def search_book_db(isbn=None, title=None):
-    if isbn:
-        with database:
-            c.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn})
-            book = c.fetchone()[0]
+def search_book_db(title):
+    with database:
+        c.execute("SELECT * FROM books WHERE title = :title", {"title": title})
+        book = c.fetchone()
+        if book:
             isbn, title, author, genre, copies, status = book
             print(
                 "ISBN :{}\nTitle : {}\nAuthor :{}\nGenre :{}\nCopies :{}\nStatus :{}".format(
                     isbn, title, author, genre, copies, status
                 )
             )
-
-    if title:
-        with database:
-            c.execute("SELECT * FROM books WHERE title = :title", {"title": title})
-            book = c.fetchone()[0]
-            isbn, title, author, genre, copies, status = book
-            print(
-                "ISBN :{}\nTitle : {}\nAuthor :{}\nGenre :{}\nCopies :{}\nStatus :{}".format(
-                    isbn, title, author, genre, copies, status
-                )
-            )
+        else:
+            print("No book is found with this title")
 
 
 def delete_book_db(isbn):
@@ -101,7 +91,7 @@ def show_books_db():
         for book in books:
             isbn, title, author, genre, copies, status = book
             print(
-                "ISBN :{}\nTitle : {}\nAuthor :{}\nGenre :{}\nCopies :{}\nStatus :{}".format(
+                "ISBN : {}\nTitle : {}\nAuthor :{}\nGenre :{}\nCopies :{}\nStatus :{}".format(
                     isbn, title, author, genre, copies, status
                 )
             )
@@ -125,65 +115,87 @@ def load_books_db():
 c.execute(
     """CREATE TABLE IF NOT EXISTS borrowed_books(
       book_isbn INT NOT NULL,
-      member_id INT NOT NULL,
+      member_email TEXT NOT NULL,
       borrow_date TEXT,
       return_date TEXT,
       reserved BOOL,
       returned BOOL,
       FOREIGN KEY (book_isbn) REFERENCES books(isbn),
-      FOREIGN KEY (member_id) REFERENCES members(id))"""
+      FOREIGN KEY (member_email) REFERENCES members(email))"""
 )
 
 
-def borrow_book_db(user, book, borrow_date):
-
+def borrow_book_db(user, isbn, borrow_date):
     with database:
+
         c.execute(
-            "SELECT * FROM borrowed_books WHERE book_isbn =:book_isbn AND member_id=:member_id AND reserved = :reserved",
+            "SELECT * FROM borrowed_books WHERE book_isbn = :book_isbn AND member_email = :member_email AND returned = 0",
             {
-                "book_isbn": book.isbn,
-                "member_id": user.id,
-                "reserved": False,
+                "book_isbn": isbn,
+                "member_email": user.email,
             },
         )
         row = c.fetchone()
-        if row is None:
-            c.execute(
-                "INSERT INTO borrowed_books (book_isbn,member_id,borrow_date,return_date,reserved,returned) VALUES('book_isbn:',:member_id,:borrow_date,:reserved,:returned)",
-                {
-                    "book_isbn": book.isbn,
-                    "member_id": user.id,
-                    "borrow_date": borrow_date,
-                    "reserved": True,
-                    "returned": False,
-                },
-            )
-        else:
+        if row:
             print("Book is already borrowed by you")
+        else:
+
+            c.execute(
+                "INSERT INTO borrowed_books (book_isbn, member_email, borrow_date, reserved, returned) VALUES (:book_isbn, :member_email, :borrow_date, :reserved, :returned)",
+                {
+                    "book_isbn": isbn,
+                    "member_email": user.email,
+                    "borrow_date": borrow_date,
+                    "reserved": 1,
+                    "returned": 0,
+                },
+            )
 
 
-def return_book_db(user, book, return_date):
-
+def return_book_db(user, isbn, return_date):
     with database:
+
         c.execute(
-            "SELECT * FROM borrowed_books WHERE book_isbn =:book_isbn AND member_id=:member_id AND returned = :returned",
+            "SELECT * FROM borrowed_books WHERE book_isbn = :book_isbn AND member_email = :member_email AND returned = :returned",
             {
-                "book_isbn": book.isbn,
-                "member_id": user.id,
-                "returned": False,
+                "book_isbn": isbn,
+                "member_email": user.email,
+                "returned": 0,
             },
         )
         row = c.fetchone()
         if row is None:
+            print("You haven't borrowed this book or it's already returned")
+        else:
+
             c.execute(
-                "INSERT INTO borrowed_books (book_isbn,member_id,return_date,return_date,reserved,returned) VALUES('book_isbn:',:member_id,:return_date,:reserved,:returned)",
+                "UPDATE borrowed_books SET return_date = :return_date, reserved = :reserved, returned = :returned WHERE book_isbn = :book_isbn AND member_email = :member_email AND returned = 0",
                 {
-                    "book_isbn": book.isbn,
-                    "member_id": user.id,
+                    "book_isbn": isbn,
+                    "member_email": user.email,
                     "return_date": return_date,
-                    "reserved": False,
-                    "returned": True,
+                    "reserved": 0,
+                    "returned": 1,
                 },
             )
-        else:
-            print("Book is already returned by you")
+
+
+def show_all_transactions():
+    with database:
+        c.execute("SELECT * FROM borrowed_books")
+        books = c.fetchall()
+        for book in books:
+            isbn, email, b_date, r_date, reserved, returned = book
+            print(
+                f"Isbn: {isbn}\nEmail: {email}\nBorrow Date: {b_date}\nReturn Date: {r_date}\nReserved: {reserved}\nReturned: {returned}"
+            )
+
+
+def show_books():
+    book_collection = load_books_db()
+    for isbn, book in book_collection.items():
+        print(isbn)
+        print(book)
+
+
+show_books()
